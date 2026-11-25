@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>7Anime Stream Player & Endpoint Tester</title>
+  <link rel="icon" type="image/png" href="logo.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <!-- HLS.js for .m3u8 playback -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0c0c0f;
+      --card-bg: #14141a;
+      --border: #22222e;
+      --border-hover: #38384a;
+      --text: #e6e6f0;
+      --muted: #7e7e96;
+      --accent: #818cf8;
+      --accent-hover: #9ca3ff;
+      --purple: #c084fc;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --surface: rgba(255,255,255,0.04);
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      padding: 24px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .logo-group img {
+      height: 38px;
+      width: auto;
+      max-width: 180px;
+      object-fit: contain;
+    }
+    .logo-text {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #e6e6f0, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-links {
+      display: flex;
+      gap: 12px;
+    }
+    .nav-btn {
+      padding: 7px 14px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: var(--border-hover);
+    }
+
+    /* Video Section */
+    .player-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .player-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    video, iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      outline: none;
+    }
+    .player-status-bar {
+      padding: 12px 18px;
+      background: #0f0f14;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .now-playing {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .now-playing .badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0c0c0f;
+    }
+    .stream-url-display {
+      color: var(--muted);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      max-width: 500px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Controls Section */
+    .controls-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .control-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 140px;
+    }
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    input, select {
+      background: #0c0c0f;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+    .btn-main {
+      padding: 10px 22px;
+      border-radius: 6px;
+      border: none;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-main:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    .btn-main:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .preset-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .preset-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 11px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .preset-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Manual Play Input */
+    .manual-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .manual-row input {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    /* Results Table */
+    .results-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .results-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .results-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .results-table th, .results-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .results-table th {
+      background: #0f0f14;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-ready { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
+    .badge-embed { background: rgba(192, 132, 252, 0.15); color: var(--purple); border: 1px solid rgba(192,132,252,0.3); }
+    .badge-warn  { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251,191,36,0.3); }
+    .badge-error { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+    .badge-checking { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+
+    .play-btn {
+      padding: 6px 12px;
+      background: var(--accent);
+      color: #0c0c0f;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .play-btn:hover { background: var(--accent-hover); }
+    .dl-btn {
+      padding: 6px 12px;
+      background: #10b981;
+      color: #0c0c0f;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .dl-btn:hover { background: #34d399; }
+    .action-links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .icon-link {
+      padding: 6px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .icon-link:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.08); }
+
+    /* Modal Backdrop and Box */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      max-width: 680px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .modal-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .modal-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-code-box {
+      background: #08080c;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #93c5fd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      word-break: break-all;
+      gap: 12px;
+    }
+    .modal-code-text {
+      flex: 1;
+      overflow-x: auto;
+    }
+    .download-action-btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .download-action-btn:hover { opacity: 0.9; }
+    .download-mirrors-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .download-mirror-tag {
+      padding: 7px 14px;
+      background: rgba(192, 132, 252, 0.15);
+      border: 1px solid rgba(192, 132, 252, 0.3);
+      color: var(--purple);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .download-mirror-tag:hover {
+      background: rgba(192, 132, 252, 0.25);
+      border-color: var(--purple);
+    }
+
+    /* Info Callout */
+    .callout {
+      background: rgba(129, 140, 248, 0.06);
+      border: 1px solid rgba(129, 140, 248, 0.2);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #c7c7dd;
+    }
+    .callout strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <a href="/" class="logo-group">
+      <img src="logo.png" alt="7Anime Logo"/>
+      <span class="logo-text">7Anime Stream Player</span>
+    </a>
+    <div class="nav-links">
+      <a href="/docs" class="nav-btn">📖 API Docs</a>
+      <a href="/" class="nav-btn">🏠 Home</a>
+    </div>
+  </header>
+
+  <!-- Video Player Section -->
+  <div class="player-card">
+    <div class="player-wrapper">
+      <video id="videoElement" controls playsinline></video>
+      <iframe id="embedFrame" style="display:none;" allowfullscreen></iframe>
+    </div>
+    <div class="player-status-bar">
+      <div class="now-playing">
+        <span class="badge" id="playerBadge">HLS Player</span>
+        <span id="playerTitle">Select a stream below or click "Scan & Test All Providers"</span>
+      </div>
+      <div class="stream-url-display" id="playerStreamUrl">No stream loaded</div>
+    </div>
+  </div>
+
+  <!-- Anime Controls -->
+  <div class="controls-card">
+    <div>
+      <label>Quick Presets</label>
+      <div class="preset-pills" style="margin-top:6px;">
+        <button class="preset-btn" onclick="selectPreset(151807, 'Solo Leveling')">Solo Leveling (151807)</button>
+        <button class="preset-btn" onclick="selectPreset(21, 'One Piece')">One Piece (21)</button>
+        <button class="preset-btn" onclick="selectPreset(113415, 'Jujutsu Kaisen')">Jujutsu Kaisen (113415)</button>
+        <button class="preset-btn" onclick="selectPreset(101922, 'Demon Slayer')">Demon Slayer (101922)</button>
+        <button class="preset-btn" onclick="selectPreset(16498, 'Attack on Titan')">Attack on Titan (16498)</button>
+        <button class="preset-btn" onclick="selectPreset(114535, 'Chainsaw Man')">Chainsaw Man (114535)</button>
+        <button class="preset-btn" onclick="selectPreset(1535, 'Death Note')">Death Note (1535)</button>
+      </div>
+    </div>
+
+    <div class="control-row">
+      <div class="input-group" style="max-width: 180px;">
+        <label for="anilistId">AniList ID</label>
+        <input type="number" id="anilistId" value="151807" placeholder="e.g. 151807"/>
+      </div>
+      <div class="input-group" style="max-width: 120px;">
+        <label for="epNum">Episode</label>
+        <input type="number" id="epNum" value="1" min="1"/>
+      </div>
+      <div class="input-group" style="max-width: 140px;">
+        <label for="audioSelect">Audio</label>
+        <select id="audioSelect">
+          <option value="sub" selected>Subbed (Sub)</option>
+          <option value="dub">Dubbed (Dub)</option>
+        </select>
+      </div>
+      <button class="btn-main" id="scanBtn" onclick="scanAllProviders()">
+        <span>⚡ Scan & Test All 12 Providers</span>
+      </button>
+      <button class="dl-btn" style="padding: 11px 18px; border-radius: 8px; font-size: 13px;" onclick="triggerAutoDownload()">
+        <span>⬇️ Download Episode MP4</span>
+      </button>
+    </div>
+
+    <!-- Manual stream test -->
+    <div class="manual-row">
+      <input type="text" id="manualUrl" placeholder="Paste direct .m3u8 or .mp4 stream URL here to play or download..."/>
+      <button class="btn-main" style="padding: 9px 18px;" onclick="playManualStream()">▶️ Play URL</button>
+      <button class="dl-btn" style="padding: 9px 18px;" onclick="downloadManualStream()">⬇️ Download</button>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="results-card">
+    <div class="results-header">
+      <span class="results-title">Provider Test Results & Streams</span>
+      <span style="font-size:12px; color:var(--muted);" id="scanStatus">Ready to test</span>
+    </div>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Status</th>
+          <th>Type</th>
+          <th>Server / Quality</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+        <tr>
+          <td colspan="5" style="text-align:center; padding: 32px; color:var(--muted);">
+            Click <strong>"⚡ Scan & Test All 12 Providers"</strong> to discover and test active .m3u8 HLS, MP4, and embed video streams.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Help & VLC Guide -->
+  <div class="callout">
+    <strong>💡 Testing Streams in VLC Media Player:</strong><br/>
+    If any provider's master playlist is restricted by browser CORS, you can copy its direct <code>.m3u8</code> URL and open it in <strong>VLC Media Player</strong> (<i>Media → Open Network Stream → Paste URL → Play</i>). VLC bypasses all browser CORS restrictions and plays HLS streams smoothly.
+  </div>
+
+</div>
+
+<!-- Download Modal -->
+<div class="modal-overlay" id="downloadModal" onclick="if(event.target === this) closeDownloadModal()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitle">⬇️ Download Video Options</h3>
+      <button class="modal-close" onclick="closeDownloadModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Injected dynamically -->
+    </div>
+  </div>
+</div>
+
+<script>
+  const PROVIDERS = [
+    "anizone",
+    "reanime",
+    "anikoto",
+    "animegg",
+    "kaa",
+    "anipm",
+    "aniwaves",
+    "pahenime",
+    "animenosub",
+    "animedunya",
+    "animeonsen",
+    "anihq"
+  ];
+
+  let currentHls = null;
+  const video = document.getElementById("videoElement");
+  const iframe = document.getElementById("embedFrame");
+  const playerBadge = document.getElementById("playerBadge");
+  const playerTitle = document.getElementById("playerTitle");
+  const playerStreamUrl = document.getElementById("playerStreamUrl");
+
+  function selectPreset(id, title) {
+    document.getElementById("anilistId").value = id;
+    playerTitle.innerText = `Selected ${title} (ID: ${id}) — Click "Scan & Test All 12 Providers"`;
+  }
+
+  function playStream(url, type, title, subtitles = []) {
+    playerTitle.innerText = title;
+    playerStreamUrl.innerText = url;
+
+    // Reset previous subtitle tracks
+    while (video.firstChild) {
+      video.removeChild(video.firstChild);
+    }
+
+    if (type === "embed") {
+      // Use iframe embed mode
+      if (currentHls) { currentHls.destroy(); currentHls = null; }
+      video.pause();
+      video.style.display = "none";
+      iframe.style.display = "block";
+      iframe.src = url;
+      playerBadge.innerText = "EMBED PLAYER";
+      playerBadge.style.background = "var(--purple)";
+      return;
+    }
+
+    // Use native video / HLS.js mode
+    iframe.src = "";
+    iframe.style.display = "none";
+    video.style.display = "block";
+
+    // Add subtitles if present
+    if (Array.isArray(subtitles)) {
+      subtitles.forEach((sub, i) => {
+        if (!sub.url) return;
+        const track = document.createElement("track");
+        track.kind = "subtitles";
+        track.label = sub.label || sub.language || `Sub ${i + 1}`;
+        track.srclang = sub.srclang || "en";
+        track.src = sub.url;
+        if (sub.default) track.default = true;
+        video.appendChild(track);
+      });
+    }
+
+    if (type === "hls" || url.includes(".m3u8")) {
+      playerBadge.innerText = "HLS (.m3u8)";
+      playerBadge.style.background = "var(--accent)";
+
+      if (Hls.isSupported()) {
+        if (currentHls) currentHls.destroy();
+        currentHls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        });
+        currentHls.loadSource(url);
+        currentHls.attachMedia(video);
+        currentHls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+        currentHls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.warn("HLS.js fatal error:", data);
+            playerStreamUrl.innerText = `${url} (Playback note: Browser CORS may block this CDN. Try in VLC or use Embed server)`;
+          }
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = url;
+        video.play().catch(() => {});
+      }
+    } else {
+      // Direct MP4
+      playerBadge.innerText = "MP4 VIDEO";
+      playerBadge.style.background = "var(--success)";
+      if (currentHls) { currentHls.destroy(); currentHls = null; }
+      video.src = url;
+      video.play().catch(() => {});
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function playManualStream() {
+    const url = document.getElementById("manualUrl").value.trim();
+    if (!url) return alert("Please enter a stream URL");
+    const isHls = url.includes(".m3u8");
+    playStream(url, isHls ? "hls" : "mp4", "Custom Stream");
+  }
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Stream URL copied to clipboard!\nYou can paste this into VLC Media Player: Media -> Open Network Stream.");
+    }).catch(() => {
+      prompt("Copy stream URL:", text);
+    });
+  }
+
+  async function testProviderEndpoint(provider, id, ep, audio) {
+    try {
+      const epRes = await fetch(`/episodes/${provider}/${id}?map=false`);
+      if (!epRes.ok) return { provider, status: "error", error: `HTTP ${epRes.status}` };
+      const epData = await epRes.json();
+      const pObj = epData[provider];
+      if (!pObj) return { provider, status: "not_found" };
+
+      const epList = pObj.episodes?.[audio] || pObj.episodes?.sub || [];
+      const targetEp = epList.find(e => e.number == ep) || epList[0];
+      if (!targetEp) return { provider, status: "no_episodes" };
+
+      const watchPath = targetEp.id.startsWith("/") ? targetEp.id : `/${targetEp.id}`;
+      const watchRes = await fetch(watchPath);
+      if (!watchRes.ok) return { provider, status: "error", error: `Watch HTTP ${watchRes.status}` };
+      const watchData = await watchRes.json();
+
+      const streams = watchData.streams || [];
+      const embeds = watchData.embeds || [];
+
+      if (streams.length === 0 && embeds.length === 0) {
+        return { provider, status: "no_streams", watchPath };
+      }
+
+      return {
+        provider,
+        status: "ok",
+        streams,
+        embeds,
+        downloads: watchData.downloads || [],
+        subtitles: watchData.subtitles || [],
+        watchPath
+      };
+    } catch (e) {
+      return { provider, status: "error", error: e.message };
+    }
+  }
+
+  async function scanAllProviders() {
+    const id = document.getElementById("anilistId").value.trim();
+    const ep = document.getElementById("epNum").value.trim() || 1;
+    const audio = document.getElementById("audioSelect").value;
+    const btn = document.getElementById("scanBtn");
+    const scanStatus = document.getElementById("scanStatus");
+    const tbody = document.getElementById("resultsBody");
+
+    if (!id) return alert("Please enter an AniList ID");
+
+    btn.disabled = true;
+    scanStatus.innerText = "Scanning all 12 providers concurrently...";
+    tbody.innerHTML = PROVIDERS.map(p => `
+      <tr id="row-${p}">
+        <td><strong>${p}</strong></td>
+        <td><span class="status-badge badge-checking">⏳ Checking...</span></td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+    `).join("");
+
+    let successCount = 0;
+
+    await Promise.all(PROVIDERS.map(async (p) => {
+      const res = await testProviderEndpoint(p, id, ep, audio);
+      const row = document.getElementById(`row-${p}`);
+      if (!row) return;
+
+      if (res.status === "ok") {
+        successCount++;
+        const firstStream = res.streams[0];
+        const firstEmbed = res.embeds?.[0];
+        const hasHls = res.streams.some(s => s.type === "hls" || (s.url && s.url.includes(".m3u8")));
+        const hasMp4 = res.streams.some(s => s.type === "mp4");
+
+        const primary = firstStream || firstEmbed;
+        const type = primary.type || (hasHls ? "hls" : "embed");
+        const streamUrl = primary.url || primary.embed || "";
+        const serverName = primary.server || primary.name || "Default";
+
+        const badgeClass = type === "hls" ? "badge-ready" : (type === "mp4" ? "badge-ready" : "badge-embed");
+        const typeLabel = type === "hls" ? "HLS (.m3u8)" : (type === "mp4" ? "Direct MP4" : "Embed Player");
+
+        window.providerScanResults = window.providerScanResults || {};
+        window.providerScanResults[p] = {
+          provider: p,
+          id,
+          ep,
+          audio,
+          type,
+          streamUrl,
+          streams: res.streams,
+          downloads: res.downloads || [],
+          serverName
+        };
+
+        row.innerHTML = `
+          <td><strong>${p}</strong></td>
+          <td><span class="status-badge ${badgeClass}">● Ready</span></td>
+          <td><strong>${typeLabel}</strong></td>
+          <td>${serverName} (${res.streams.length} stream${res.streams.length > 1 ? 's' : ''})</td>
+          <td>
+            <div class="action-links">
+              <button class="play-btn" onclick='playStream("${encodeURI(streamUrl)}", "${type}", "${p} - Episode ${ep} (${audio})", ${JSON.stringify(res.subtitles || [])})'>
+                ▶️ Play
+              </button>
+              <button class="dl-btn" onclick='openDownloadModal("${p}")'>
+                ⬇️ Download
+              </button>
+              <button class="icon-link" onclick='copyToClipboard("${encodeURI(streamUrl)}")'>
+                📋 Copy
+              </button>
+              <a class="icon-link" href="${res.watchPath}" target="_blank">
+                ↗️ JSON
+              </a>
+            </div>
+          </td>
+        `;
+      } else if (res.status === "no_streams") {
+        row.innerHTML = `
+          <td><strong>${p}</strong></td>
+          <td><span class="status-badge badge-warn">⚠️ Episode found, no stream</span></td>
+          <td>—</td>
+          <td>—</td>
+          <td><a class="icon-link" href="${res.watchPath}" target="_blank">↗️ JSON</a></td>
+        `;
+      } else if (res.status === "no_episodes" || res.status === "not_found") {
+        row.innerHTML = `
+          <td><strong>${p}</strong></td>
+          <td><span class="status-badge badge-error">✕ No Catalog Match</span></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        `;
+      } else {
+        row.innerHTML = `
+          <td><strong>${p}</strong></td>
+          <td><span class="status-badge badge-error">✕ ${res.error || "Unavailable"}</span></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        `;
+      }
+    }));
+
+    btn.disabled = false;
+    scanStatus.innerText = `Scan complete: ${successCount} provider(s) ready with stream output.`;
+  }
+
+  function triggerAutoDownload() {
+    const id = document.getElementById("anilistId").value.trim();
+    const ep = document.getElementById("epNum").value.trim() || 1;
+    const audio = document.getElementById("audioSelect").value || "sub";
+    if (!id) return alert("Please enter an AniList ID");
+    window.location.href = `/download?anilistId=${id}&episode=${ep}&audio=${audio}&filename=anime_${id}_ep${ep}_${audio}.mp4`;
+  }
+
+  function openDownloadModal(providerKey) {
+    const data = window.providerScanResults?.[providerKey];
+    if (!data) return alert("Provider data not found");
+
+    const modal = document.getElementById("downloadModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+
+    const id = document.getElementById("anilistId").value || "anime";
+    const ep = document.getElementById("epNum").value || "1";
+    const audio = document.getElementById("audioSelect").value || "sub";
+    const filenameBase = `${providerKey}_anilist_${id}_ep${ep}_${audio}`;
+
+    modalTitle.innerText = `⬇️ Download Options — ${providerKey} (Ep ${ep} ${audio.toUpperCase()})`;
+
+    let html = "";
+
+    // Section 1: Browser Direct Video Download
+    const downloadUrl = `/download?anilistId=${id}&episode=${ep}&audio=${audio}&provider=${providerKey}&filename=${filenameBase}.mp4`;
+    const directUrlFallback = `/download?url=${encodeURIComponent(data.streamUrl)}&filename=${filenameBase}.mp4&provider=${providerKey}`;
+
+    html += `
+      <div class="modal-section">
+        <div class="modal-section-title">
+          <span>⚡ Method 1: Universal MP4 Download (Production Pipeline)</span>
+          <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(16,185,129,0.2); color:#10b981;">Recommended</span>
+        </div>
+        <p style="font-size:12px; color:var(--muted); line-height:1.4;">
+          Processes full episode into a 100% compliant <b>MP4 container</b> (H.264 video + AAC audio) with faststart metadata.<br/>
+          Playable in Windows Media Player, VLC, iOS, Android, and modern browsers. Automatically falls back if provider fails.
+        </p>
+        <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="download-action-btn" href="${downloadUrl}" download="${filenameBase}.mp4">
+            ⬇️ Download Verified MP4 (${providerKey.toUpperCase()})
+          </a>
+          <a class="download-action-btn" style="background:#4f46e5;" href="/download?anilistId=${id}&episode=${ep}&audio=${audio}&filename=${filenameBase}_auto.mp4" download="${filenameBase}_auto.mp4">
+            🔄 Auto Fallback MP4
+          </a>
+        </div>
+      </div>
+    `;
+
+    // Section 2: Direct Mirror Links (e.g. Kiwi / Pahe for Anikoto)
+    if (data.downloads && data.downloads.length > 0) {
+      html += `
+        <div class="modal-section">
+          <div class="modal-section-title">
+            <span>🌐 Method 2: Direct Download Mirrors (${data.downloads.length} available)</span>
+          </div>
+          <p style="font-size:12px; color:var(--muted);">
+            Dedicated episode download mirrors provided by the source:
+          </p>
+          <div class="download-mirrors-list" style="margin-top:6px;">
+            ${data.downloads.map((d, i) => `
+              <a class="download-mirror-tag" href="${d.url}" target="_blank" rel="noopener">
+                ⬇️ ${d.label || 'Mirror'} #${i + 1}
+              </a>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    // Section 3: Lossless Command Line (FFmpeg & yt-dlp)
+    const ffmpegCmd = `ffmpeg -i "${data.streamUrl}" -c copy "${filenameBase}.mp4"`;
+    const ytdlpCmd = `yt-dlp "${data.streamUrl}" -o "${filenameBase}.mp4"`;
+
+    html += `
+      <div class="modal-section">
+        <div class="modal-section-title">
+          <span>💻 Method 3: Lossless Command-Line (.mp4 Remuxing)</span>
+        </div>
+        <p style="font-size:12px; color:var(--muted);">
+          Best for high-speed remuxing of HLS streams directly into a clean, seekable <code>.mp4</code> container without re-encoding:
+        </p>
+
+        <label style="margin-top:8px;">FFmpeg (Lossless Remux to MP4):</label>
+        <div class="modal-code-box">
+          <div class="modal-code-text">${escapeHtml(ffmpegCmd)}</div>
+          <button class="icon-link" onclick='copyCmd("${encodeURIComponent(ffmpegCmd)}")'>📋 Copy</button>
+        </div>
+
+        <label style="margin-top:8px;">yt-dlp (Mux to MP4):</label>
+        <div class="modal-code-box">
+          <div class="modal-code-text">${escapeHtml(ytdlpCmd)}</div>
+          <button class="icon-link" onclick='copyCmd("${encodeURIComponent(ytdlpCmd)}")'>📋 Copy</button>
+        </div>
+      </div>
+    `;
+
+    modalBody.innerHTML = html;
+    modal.classList.add("open");
+  }
+
+  function downloadManualStream() {
+    const url = document.getElementById("manualUrl").value.trim();
+    if (!url) return alert("Please enter or paste a stream URL first");
+    window.providerScanResults = window.providerScanResults || {};
+    window.providerScanResults["custom"] = {
+      provider: "custom",
+      type: url.includes(".m3u8") ? "hls" : "mp4",
+      streamUrl: url,
+      downloads: [],
+      title: "custom_video"
+    };
+    openDownloadModal("custom");
+  }
+
+  function closeDownloadModal() {
+    document.getElementById("downloadModal").classList.remove("open");
+  }
+
+  function copyCmd(encoded) {
+    const cmd = decodeURIComponent(encoded);
+    navigator.clipboard.writeText(cmd).then(() => {
+      alert("Command copied to clipboard!");
+    }).catch(() => {
+      prompt("Copy command:", cmd);
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+</script>
+
+</body>
+</html>

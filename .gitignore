@@ -1,0 +1,23 @@
+node_modules/
+.env
+core/.cache/
+providers/2dhive.js
+extractors/babastream.js
+local-only-providers/
+providers/mkissa.js
+
+# Temporary test videos and generated downloads
+temp/
+*.mp4
+*.mkv
+*.mov
+*.ts
+
+# Temporary subtitle files
+*.vtt
+*.srt
+*.ass
+*.ssa
+
+# Logs
+*.log
